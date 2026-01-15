@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>CS2 Кейсы</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --bg-secondary: #16213e;
+            --text-color: #eaeaea;
+            --text-muted: #8892b0;
+            --accent: #e94560;
+            --success: #4ade80;
+            --border: #2d3748;
+            
+            /* Rarity colors */
+            --common: #b0c3d9;
+            --uncommon: #5e98d9;
+            --rare: #4b69ff;
+            --epic: #8847ff;
+            --legendary: #eb4b4b;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 12px;
+            padding-bottom: 80px;
+        }
+
+        /* Balance Bar */
+        .balance-bar {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border: 1px solid var(--border);
+        }
+
+        .balance-label {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .balance-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .balance-value::after {
+            content: ' ₽';
+            font-size: 18px;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 16px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Case Selector */
+        .cases-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .case-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            border: 2px solid var(--border);
+            cursor: pointer;
+            transition: border-color 0.2s, transform 0.1s;
+        }
+
+        .case-card.selected {
+            border-color: var(--accent);
+            transform: scale(1.02);
+        }
+
+        .case-card:active {
+            transform: scale(0.98);
+        }
+
+        .case-icon {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+
+        .case-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .case-price {
+            font-size: 16px;
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* Open Button */
+        .open-btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent), #ff6b6b);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+
+        .open-btn:active {
+            transform: scale(0.98);
+        }
+
+        .open-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Drop Result */
+        .drop-result {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 2px solid var(--border);
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .drop-result.hidden {
+            display: none;
+        }
+
+        .drop-result.animating .drop-item-name {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .drop-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .drop-item-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .drop-rarity {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .drop-price {
+            font-size: 16px;
+            color: var(--success);
+        }
+
+        /* Inventory */
+        .inventory {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .inventory-header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .inventory-count {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .inventory-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .inventory-empty {
+            padding: 40px 20px;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        .inventory-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .inventory-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-info {
+            flex: 1;
+        }
+
+        .item-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .item-rarity-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .sell-btn {
+            padding: 10px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            background: var(--success);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .sell-btn:active {
+            opacity: 0.8;
+        }
+
+        /* Rarity styling */
+        .rarity-common { color: var(--common); }
+        .rarity-uncommon { color: var(--uncommon); }
+        .rarity-rare { color: var(--rare); }
+        .rarity-epic { color: var(--epic); }
+        .rarity-legendary { color: var(--legendary); }
+
+        .bg-common { background: var(--common); color: #1a1a2e; }
+        .bg-uncommon { background: var(--uncommon); color: white; }
+        .bg-rare { background: var(--rare); color: white; }
+        .bg-epic { background: var(--epic); color: white; }
+        .bg-legendary { background: var(--legendary); color: white; }
+
+        .border-common { border-color: var(--common); }
+        .border-uncommon { border-color: var(--uncommon); }
+        .border-rare { border-color: var(--rare); }
+        .border-epic { border-color: var(--epic); }
+        .border-legendary { border-color: var(--legendary); }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-secondary);
+            padding: 12px 24px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 14px;
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Sell All Button */
+        .sell-all-btn {
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .sell-all-btn:active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .sell-all-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <!-- Balance Bar -->
+    <div class="balance-bar">
+        <span class="balance-label">Баланс</span>
+        <span class="balance-value" id="balance">1000</span>
+    </div>
+
+    <!-- Case Selector -->
+    <div class="section-title">Выберите кейс</div>
+    <div class="cases-grid" id="casesGrid"></div>
+
+    <!-- Open Button -->
+    <button class="open-btn" id="openBtn">Открыть кейс</button>
+
+    <!-- Drop Result -->
+    <div class="drop-result hidden" id="dropResult">
+        <div class="drop-label">Вам выпало</div>
+        <div class="drop-item-name" id="dropName">—</div>
+        <div class="drop-rarity" id="dropRarity">—</div>
+        <div class="drop-price" id="dropPrice">—</div>
+    </div>
+
+    <!-- Inventory -->
+    <div class="inventory">
+        <div class="inventory-header">
+            <div>
+                <span class="section-title" style="margin:0">Инвентарь</span>
+                <span class="inventory-count" id="inventoryCount">(0)</span>
+            </div>
+            <button class="sell-all-btn" id="sellAllBtn" disabled>Продать всё</button>
+        </div>
+        <div class="inventory-list" id="inventoryList">
+            <div class="inventory-empty">Пусто</div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ==================== DATA ====================
+        const CASES = [
+            {
+                id: 'gamma',
+                name: 'Гамма Кейс',
+                icon: '📦',
+                price: 150,
+                items: [
+                    { name: 'Glock-18 | Пустынный шторм', rarity: 'common', price: 30 },
+                    { name: 'P250 | Железный клад', rarity: 'common', price: 35 },
+                    { name: 'MAC-10 | Карнивал', rarity: 'common', price: 25 },
+                    { name: 'FAMAS | Выживший', rarity: 'uncommon', price: 80 },
+                    { name: 'Galil AR | Чатийские пески', rarity: 'uncommon', price: 90 },
+                    { name: 'M4A4 | Посейдон', rarity: 'rare', price: 250 },
+                    { name: 'AWP | Феникс', rarity: 'rare', price: 300 },
+                    { name: 'AK-47 | Неоновый гонщик', rarity: 'epic', price: 800 },
+                    { name: 'Нож-бабочка | Градиент', rarity: 'legendary', price: 5000 }
+                ]
+            },
+            {
+                id: 'spectrum',
+                name: 'Спектр Кейс',
+                icon: '🎁',
+                price: 200,
+                items: [
+                    { name: 'USP-S | Тёмная вода', rarity: 'common', price: 40 },
+                    { name: 'MP7 | Городской опасник', rarity: 'common', price: 35 },
+                    { name: 'Five-SeveN | Гипер зверь', rarity: 'common', price: 30 },
+                    { name: 'AUG | Хамелеон', rarity: 'uncommon', price: 100 },
+                    { name: 'P90 | Азимов', rarity: 'uncommon', price: 120 },
+                    { name: 'M4A1-S | Гиперзверь', rarity: 'rare', price: 350 },
+                    { name: 'Desert Eagle | Пламя', rarity: 'rare', price: 400 },
+                    { name: 'AWP | Драгон Лор', rarity: 'epic', price: 1500 },
+                    { name: 'Керамбит | Мраморный градиент', rarity: 'legendary', price: 8000 }
+                ]
+            },
+            {
+                id: 'clutch',
+                name: 'Клатч Кейс',
+                icon: '💎',
+                price: 300,
+                items: [
+                    { name: 'Tec-9 | Фуэго', rarity: 'common', price: 50 },
+                    { name: 'Nova | Антик', rarity: 'common', price: 45 },
+                    { name: 'MP9 | Роза и железо', rarity: 'common', price: 40 },
+                    { name: 'UMP-45 | Прайм', rarity: 'uncommon', price: 150 },
+                    { name: 'SG 553 | Интегралл', rarity: 'uncommon', price: 180 },
+                    { name: 'AK-47 | Императрица', rarity: 'rare', price: 500 },
+                    { name: 'AWP | Дикий лотос', rarity: 'rare', price: 600 },
+                    { name: 'M4A4 | Вой', rarity: 'epic', price: 2000 },
+                    { name: 'Байонет | Гамма Доплер', rarity: 'legendary', price: 12000 }
+                ]
+            },
+            {
+                id: 'danger',
+                name: 'Опасная Зона',
+                icon: '⚠️',
+                price: 100,
+                items: [
+                    { name: 'P2000 | Океанская пена', rarity: 'common', price: 20 },
+                    { name: 'MP5-SD | Лаборатория', rarity: 'common', price: 25 },
+                    { name: 'Sawed-Off | Апокалипсис', rarity: 'common', price: 15 },
+                    { name: 'CZ75-Auto | Изумруд', rarity: 'uncommon', price: 60 },
+                    { name: 'SSG 08 | Кровь в воде', rarity: 'uncommon', price: 70 },
+                    { name: 'SCAR-20 | Эмеральд', rarity: 'rare', price: 180 },
+                    { name: 'G3SG1 | Экзекутор', rarity: 'rare', price: 200 },
+                    { name: 'Desert Eagle | Изумруд', rarity: 'epic', price: 600 },
+                    { name: 'Штык-нож | Мраморный градиент', rarity: 'legendary', price: 3500 }
+                ]
+            }
+        ];
+
+        // Rarity weights (probability distribution)
+        const RARITY_WEIGHTS = {
+            common: 50,      // 50%
+            uncommon: 30,    // 30%
+            rare: 14,        // 14%
+            epic: 5,         // 5%
+            legendary: 1     // 1%
+        };
+
+        const RARITY_NAMES = {
+            common: 'Обычное',
+            uncommon: 'Необычное',
+            rare: 'Редкое',
+            epic: 'Эпическое',
+            legendary: 'Легендарное'
+        };
+
+        // ==================== STATE ====================
+        let state = {
+            balance: 1000,
+            selectedCaseId: 'gamma',
+            inventory: [],
+            lastDrop: null
+        };
+
+        // ==================== TELEGRAM WEBAPP ====================
+        function initTelegram() {
+            if (window.Telegram && Telegram.WebApp) {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+                
+                // Apply Telegram theme if available
+                const theme = Telegram.WebApp.themeParams;
+                if (theme.bg_color) {
+                    document.documentElement.style.setProperty('--bg-color', theme.bg_color);
+                }
+                if (theme.secondary_bg_color) {
+                    document.documentElement.style.setProperty('--bg-secondary', theme.secondary_bg_color);
+                }
+                if (theme.text_color) {
+                    document.documentElement.style.setProperty('--text-color', theme.text_color);
+                }
+                if (theme.hint_color) {
+                    document.documentElement.style.setProperty('--text-muted', theme.hint_color);
+                }
+                if (theme.button_color) {
+                    document.documentElement.style.setProperty('--accent', theme.button_color);
+                }
+            }
+        }
+
+        function hapticFeedback(type = 'impact') {
+            if (window.Telegram && Telegram.WebApp && Telegram.WebApp.HapticFeedback) {
+                if (type === 'impact') {
+                    Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+                } else if (type === 'success') {
+                    Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                } else if (type === 'error') {
+                    Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                }
+            }
+        }
+
+        // ==================== STORAGE ====================
+        function saveState() {
+            try {
+                localStorage.setItem('cs2_case_state', JSON.stringify(state));
+            } catch (e) {
+                console.log('LocalStorage not available');
+            }
+        }
+
+        function loadState() {
+            try {
+                const saved = localStorage.getItem('cs2_case_state');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    state = { ...state, ...parsed };
+                }
+            } catch (e) {
+                console.log('Failed to load state');
+            }
+        }
+
+        // ==================== WEIGHTED RANDOM ====================
+        function getRandomItem(caseData) {
+            // Group items by rarity
+            const itemsByRarity = {};
+            caseData.items.forEach(item => {
+                if (!itemsByRarity[item.rarity]) {
+                    itemsByRarity[item.rarity] = [];
+                }
+                itemsByRarity[item.rarity].push(item);
+            });
+
+            // Calculate total weight
+            const totalWeight = Object.entries(RARITY_WEIGHTS)
+                .filter(([rarity]) => itemsByRarity[rarity]?.length > 0)
+                .reduce((sum, [, weight]) => sum + weight, 0);
+
+            // Pick random rarity based on weights
+            let random = Math.random() * totalWeight;
+            let selectedRarity = 'common';
+
+            for (const [rarity, weight] of Object.entries(RARITY_WEIGHTS)) {
+                if (itemsByRarity[rarity]?.length > 0) {
+                    random -= weight;
+                    if (random <= 0) {
+                        selectedRarity = rarity;
+                        break;
+                    }
+                }
+            }
+
+            // Pick random item from selected rarity
+            const items = itemsByRarity[selectedRarity] || itemsByRarity['common'];
+            const randomIndex = Math.floor(Math.random() * items.length);
+            return { ...items[randomIndex], id: Date.now() + Math.random() };
+        }
+
+        // ==================== UI FUNCTIONS ====================
+        function renderCases() {
+            const grid = document.getElementById('casesGrid');
+            grid.innerHTML = CASES.map(c => `
+                <div class="case-card ${state.selectedCaseId === c.id ? 'selected' : ''}" 
+                     data-case-id="${c.id}" onclick="selectCase('${c.id}')">
+                    <div class="case-icon">${c.icon}</div>
+                    <div class="case-name">${c.name}</div>
+                    <div class="case-price">${c.price} ₽</div>
+                </div>
+            `).join('');
+        }
+
+        function selectCase(caseId) {
+            state.selectedCaseId = caseId;
+            hapticFeedback('impact');
+            renderCases();
+            updateOpenButton();
+            saveState();
+        }
+
+        function updateBalance() {
+            document.getElementById('balance').textContent = state.balance;
+        }
+
+        function updateOpenButton() {
+            const btn = document.getElementById('openBtn');
+            const selectedCase = CASES.find(c => c.id === state.selectedCaseId);
+            
+            if (selectedCase) {
+                btn.textContent = `Открыть кейс — ${selectedCase.price} ₽`;
+                btn.disabled = state.balance < selectedCase.price;
+            }
+        }
+
+        function showDrop(item) {
+            const result = document.getElementById('dropResult');
+            const nameEl = document.getElementById('dropName');
+            const rarityEl = document.getElementById('dropRarity');
+            const priceEl = document.getElementById('dropPrice');
+
+            result.classList.remove('hidden');
+            result.classList.add('animating');
+
+            // Remove rarity classes
+            nameEl.className = 'drop-item-name rarity-' + item.rarity;
+            rarityEl.className = 'drop-rarity bg-' + item.rarity;
+
+            nameEl.textContent = item.name;
+            rarityEl.textContent = RARITY_NAMES[item.rarity];
+            priceEl.textContent = `Стоимость: ${item.price} ₽`;
+
+            setTimeout(() => result.classList.remove('animating'), 500);
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('inventoryList');
+            const count = document.getElementById('inventoryCount');
+            const sellAllBtn = document.getElementById('sellAllBtn');
+
+            count.textContent = `(${state.inventory.length})`;
+            sellAllBtn.disabled = state.inventory.length === 0;
+
+            if (state.inventory.length === 0) {
+                list.innerHTML = '<div class="inventory-empty">Пусто</div>';
+                return;
+            }
+
+            list.innerHTML = state.inventory.map((item, index) => `
+                <div class="inventory-item">
+                    <div class="item-info">
+                        <div class="item-name rarity-${item.rarity}">${item.name}</div>
+                        <span class="item-rarity-badge bg-${item.rarity}">${RARITY_NAMES[item.rarity]}</span>
+                    </div>
+                    <button class="sell-btn" onclick="sellItem(${index})">Продать ${item.price} ₽</button>
+                </div>
+            `).join('');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // ==================== GAME ACTIONS ====================
+        function openCase() {
+            const selectedCase = CASES.find(c => c.id === state.selectedCaseId);
+            
+            if (!selectedCase || state.balance < selectedCase.price) {
+                hapticFeedback('error');
+                showToast('Недостаточно средств!');
+                return;
+            }
+
+            // Deduct balance
+            state.balance -= selectedCase.price;
+            updateBalance();
+
+            // Get random item
+            const item = getRandomItem(selectedCase);
+            state.lastDrop = item;
+            state.inventory.unshift(item);
+
+            // UI updates
+            showDrop(item);
+            renderInventory();
+            updateOpenButton();
+            saveState();
+
+            // Haptic feedback based on rarity
+            if (item.rarity === 'legendary' || item.rarity === 'epic') {
+                hapticFeedback('success');
+            } else {
+                hapticFeedback('impact');
+            }
+        }
+
+        function sellItem(index) {
+            const item = state.inventory[index];
+            if (!item) return;
+
+            state.balance += item.price;
+            state.inventory.splice(index, 1);
+
+            updateBalance();
+            renderInventory();
+            updateOpenButton();
+            saveState();
+            hapticFeedback('success');
+            showToast(`Продано за ${item.price} ₽`);
+        }
+
+        function sellAll() {
+            if (state.inventory.length === 0) return;
+
+            const total = state.inventory.reduce((sum, item) => sum + item.price, 0);
+            state.balance += total;
+            state.inventory = [];
+
+            updateBalance();
+            renderInventory();
+            updateOpenButton();
+            saveState();
+            hapticFeedback('success');
+            showToast(`Продано всё за ${total} ₽`);
+        }
+
+        // ==================== INIT ====================
+        function init() {
+            initTelegram();
+            loadState();
+            renderCases();
+            updateBalance();
+            updateOpenButton();
+            renderInventory();
+
+            // Event listeners
+            document.getElementById('openBtn').addEventListener('click', openCase);
+            document.getElementById('sellAllBtn').addEventListener('click', sellAll);
+        }
+
+        // Start app
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
